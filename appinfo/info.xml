@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<info xmlns:xsi= "http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
+    <id>wrikesync</id>
+    <name>Wrike Sync</name>
+    <summary>Wrike Projectmanagement Space Sync</summary>
+    <description><![CDATA[Wrike Projectmanagement Space Sync]]></description>
+    <version>0.9.6</version>
+    <licence>agpl</licence>
+    <author mail="support@g-ar.tech" homepage="https://g-ar.tech">GArTech</author>
+    <namespace>WrikeSync</namespace>
+    <category>organization</category>
+    <bugs>https://g-ar.tech/support</bugs>
+    <dependencies>
+        <nextcloud min-version="15" max-version="19"/>
+    </dependencies>
+
+    <!--<navigations>
+        <navigation>
+            <name>Wrike Sync</name>
+            <route>wrikesync.node_folder_mapping.index</route>
+            <order>0</order>
+        </navigation>
+    </navigations>-->
+
+    <settings>
+        <admin>OCA\WrikeSync\Settings\Admin</admin>
+        <admin-section>OCA\WrikeSync\Settings\Section</admin-section>
+    </settings>
+
+    <!-- Register the cron job task for synchronizing wrike spaces to nextcloud file system -->
+    <background-jobs>
+        <job>OCA\WrikeSync\Cron\SynchronizationTask</job>
+        <job>OCA\WrikeSync\Cron\LicenseTask</job>
+    </background-jobs>
+</info>

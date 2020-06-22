@@ -1,0 +1,15 @@
+{
+    "name": "Wrike Sync",
+    "description": "Wrike Projectmanagement Space Sync",
+    "type": "project",
+    "license": "AGPL",
+    "authors": [
+        {
+            "name": "GArTech"
+        }
+    ],
+    "require": {},
+    "require-dev": {
+        "phpunit/phpunit": "^5.4"
+    }
+}
