@@ -51,10 +51,11 @@ class NodeTaskMappingService
         }
     }
 
-    public function create(string $ncNodeId, string $wrTaskId) {
+    public function create(string $ncNodeId, string $wrTaskId, $wrParentId) {
         $nodeTaskMapping = new NodeTaskMapping();
         $nodeTaskMapping->setNcNodeId($ncNodeId);
         $nodeTaskMapping->setWrTaskId($wrTaskId);
+        $nodeTaskMapping->setWrParentId($wrParentId);
 
         return $this->mapper->create($nodeTaskMapping);
     }
@@ -76,5 +77,9 @@ class NodeTaskMappingService
         } catch(Exception $e) {
             return null;
         }
+    }
+
+    public function clear() {
+        $this->mapper->clear();
     }
 }

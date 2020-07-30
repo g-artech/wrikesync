@@ -8,6 +8,7 @@ class NodeFolderMapping extends Entity implements JsonSerializable
 {
     protected $ncNodeId;
     protected $wrFolderId;
+    protected $wrParentId;
     protected $fullPath;
 
     /**
@@ -42,6 +43,26 @@ class NodeFolderMapping extends Entity implements JsonSerializable
         return $this->wrFolderId;
     }
 
+    /**
+     * @param mixed $wrParentId
+     */
+    public function setWrParentId($wrParentId): void
+    {
+        $this->wrParentId = $wrParentId;
+    }
+
+    /**
+     * @return mixed
+     */
+    public function getWrParentId()
+    {
+        return $this->wrParentId;
+    }
+
+    public function hasParentId() {
+        return $this->wrParentId != null;
+    }
+
     public function setFullPath($fullPath) {
         $this->fullPath = $fullPath;
     }
@@ -56,6 +77,7 @@ class NodeFolderMapping extends Entity implements JsonSerializable
             "id" => $this->id,
             "nc_node_id" => $this->ncNodeId,
             "wr_folder_id" => $this->wrFolderId,
+            "wr_parent_id" => $this->wrParentId,
             "full_path" => $this->fullPath
         ];
     }

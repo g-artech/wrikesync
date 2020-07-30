@@ -22,6 +22,8 @@ return [
         ['name' => 'node_folder_mapping#createForName', 'url' => '/mappings/forName', 'verb' => 'POST'],
         //Delete a specific mapping by its ID
         ['name' => 'node_folder_mapping#destroy', 'url' => '/mappings/{id}', 'verb' => 'DELETE'],
+        //Clear all mappings which are created automatically (node-task)
+        ['name' => 'node_folder_mapping#clear', 'url' => '/mappings', 'verb' => 'DELETE'],
 
         //Routes for spaces administration
         //Get all wrike spaces from Wrike API

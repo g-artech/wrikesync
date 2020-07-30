@@ -12,6 +12,18 @@ class NodeFolderMappingMapper extends QBMapper
         parent::__construct($db, 'wr_node_folder_map');
     }
 
+    public function findMappingForNodeId($nodeId) {
+        $qb = $this->db->getQueryBuilder();
+
+        $qb->select('*')
+            ->from('wr_node_folder_map')
+            ->where(
+                $qb->expr()->eq('nc_node_id', $qb->createNamedParameter($nodeId, IQueryBuilder::PARAM_INT))
+            );
+
+        return $this->findEntity($qb);
+    }
+
     public function findMappingForFolderId(string $folderId) {
         $qb = $this->db->getQueryBuilder();
 
@@ -36,7 +48,8 @@ class NodeFolderMappingMapper extends QBMapper
         $qb->insert('wr_node_folder_map')
             ->values(array(
                 'nc_node_id' => $qb->createNamedParameter($mapping->getNcNodeId(), IQueryBuilder::PARAM_INT),
-                'wr_folder_id' => $qb->createNamedParameter($mapping->getWrFolderId(), IQueryBuilder::PARAM_STR)
+                'wr_folder_id' => $qb->createNamedParameter($mapping->getWrFolderId(), IQueryBuilder::PARAM_STR),
+                'wr_parent_id' => $qb->createNamedParameter($mapping->getWrParentId(), IQueryBuilder::PARAM_STR)
             ));
 
         return $qb->execute();

@@ -18,7 +18,8 @@ class NodeTaskMappingMapper extends QBMapper
         $qb->insert('wr_node_task_map')
             ->values(array(
                 'nc_node_id' => $qb->createNamedParameter($mapping->getNcNodeId(), IQueryBuilder::PARAM_INT),
-                'wr_task_id' => $qb->createNamedParameter($mapping->getWrTaskId(), IQueryBuilder::PARAM_STR)
+                'wr_task_id' => $qb->createNamedParameter($mapping->getWrTaskId(), IQueryBuilder::PARAM_STR),
+                'wr_parent_id' => $qb->createNamedParameter($mapping->getWrParentId(), IQueryBuilder::PARAM_STR)
             ));
 
         return $qb->execute();
@@ -69,5 +70,13 @@ class NodeTaskMappingMapper extends QBMapper
             ->setFirstResult($offset);
 
         return $this->findEntities($qb);
+    }
+
+    public function clear() {
+        $qb = $this->db->getQueryBuilder();
+
+        $qb->delete('wr_node_task_map');
+
+        return $qb->execute();
     }
 }

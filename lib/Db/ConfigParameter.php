@@ -17,6 +17,7 @@ class ConfigParameter extends Entity implements JsonSerializable
 
     public static $KEY_NEXTCLOUD_FILESYSTEM_ROOT_ID = "nextcloud.filesystem.root.id";
     public static $KEY_NEXTCLOUD_FILESYSTEM_SYNC_USER = "nextcloud.filesystem.sync.user";
+    public static $KEY_NEXTCLOUD_BASE_URL = "nextcloud.base.url";
 
     public static $KEY_CRONJOB_LAST_EXEC_START = "cronjob.laststart.sync";
     public static $KEY_CRONJOB_LASTRUN_SYNC = "cronjob.lastrun.sync";

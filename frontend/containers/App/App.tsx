@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react'
-import axios from 'axios'
+import axios from '@nextcloud/axios'
 
 import {SetMappingForm} from '../SetMappingForm/SetMappingForm'
 import {SetLicenseForm} from '../../components/SetLicenseForm/SetLicenseForm'
@@ -43,12 +43,13 @@ export default () => {
                     item.key === 'wrike.api.port' ||
                     item.key === 'wrike.api.protocol' ||
                     item.key === 'wrike.api.path' ||
+                    item.key === 'nextcloud.base.url' ||
                     item.key === 'wrike.api.auth.token'
                 )
             })
-            // console.log('checkLicenseConfig (resultData.length === 7):', (resultData.length === 7))
-            setLicenseStatusRequest((resultData.length === 7))
-            // setLicenseStatus(resultData.length === 7)
+            // console.log('checkLicenseConfig (resultData.length === 8):', (resultData.length === 8))
+            setLicenseStatusRequest((resultData.length === 8))
+            // setLicenseStatus(resultData.length === 8)
         }
     }
 
@@ -63,11 +64,12 @@ export default () => {
                     item.key === 'wrike.api.port' ||
                     item.key === 'wrike.api.protocol' ||
                     item.key === 'wrike.api.path' ||
+                    item.key === 'nextcloud.base.url' ||
                     item.key === 'wrike.api.auth.token'
                 )
             })
-            return (resultData.length === 7)
-            // setLicenseStatus(resultData.length === 7)
+            return (resultData.length === 8)
+            // setLicenseStatus(resultData.length === 8)
         }
     }
 

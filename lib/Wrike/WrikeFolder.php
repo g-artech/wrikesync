@@ -10,13 +10,15 @@ class WrikeFolder implements JsonSerializable
     private $title;
     private $scope;
     private $childIds;
+    private $parentIds;
 
-    function __construct($folderId, $title, $scope, $childIds)
+    function __construct($folderId, $title, $scope, $childIds, $parentIds)
     {
         $this->folderId = $folderId;
         $this->title = str_replace(array('/'), array('_'), $title);
         $this->scope = $scope;
         $this->childIds = $childIds;
+        $this->parentIds = $parentIds;
     }
 
     /**
@@ -83,6 +85,22 @@ class WrikeFolder implements JsonSerializable
         $this->childIds = $childIds;
     }
 
+    /**
+     * @return mixed
+     */
+    public function getParentIds()
+    {
+        return $this->parentIds;
+    }
+
+    public function getParentId() {
+        if ($this->parentIds == null || sizeof($this->parentIds) == 0) {
+            return null;
+        } else {
+            return $this->parentIds[0];
+        }
+    }
+
     public function isFolderScope() : bool {
         return strcasecmp("WsFolder", $this->scope) == 0;
     }
@@ -93,7 +111,9 @@ class WrikeFolder implements JsonSerializable
             "folderId" => $this->folderId,
             "title" => $this->title,
             "scope" => $this->scope,
-            "childIds" => $this->childIds
+            "childIds" => $this->childIds,
+            "parentIds" => $this->parentIds,
+            "parentId" => $this->getParentId()
         ];
     }
 }

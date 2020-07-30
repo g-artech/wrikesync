@@ -115,7 +115,7 @@ class WrikeAPIController
         $api_response = $this->doApiGet($url);
 
         foreach ($api_response as $api_folder) {
-            $folder = new WrikeFolder($api_folder->id, $api_folder->title, $api_folder->scope, $api_folder->childIds);
+            $folder = new WrikeFolder($api_folder->id, $api_folder->title, $api_folder->scope, $api_folder->childIds, $api_folder->parentIds);
 
             if ($folder->isFolderScope()) {
                 array_push($folders, $folder);
@@ -132,7 +132,7 @@ class WrikeAPIController
         $api_response = $this->doApiGet($url);
 
         foreach ($api_response as $api_folder) {
-            $folder = new WrikeFolder($api_folder->id, $api_folder->title, $api_folder->scope, $api_folder->childIds);
+            $folder = new WrikeFolder($api_folder->id, $api_folder->title, $api_folder->scope, $api_folder->childIds, $api_folder->parentIds);
             if ($folder->isFolderScope()) {
                 return $folder;
             }
@@ -158,7 +158,7 @@ class WrikeAPIController
             $api_response = $this->doApiGet($url);
 
             foreach ($api_response as $api_folder) {
-                $subFolder = new WrikeFolder($api_folder->id, $api_folder->title, $api_folder->scope, $api_folder->childIds);
+                $subFolder = new WrikeFolder($api_folder->id, $api_folder->title, $api_folder->scope, $api_folder->childIds, $api_folder->parentIds);
 
                 if ($subFolder->isFolderScope()) {
                     array_push($folders, $subFolder);
@@ -176,9 +176,13 @@ class WrikeAPIController
 
         $api_response = $this->doApiGet($url);
 
+        //Because the API does not return the parent IDs here we have to add it manually
+        $parentIds = [$folderId];
+
         //Iterate though all fetched tasks for this space
+        //We do not have supertask IDs here because it is no subtask, just as task of a folder
         foreach ($api_response as $api_task) {
-            $task = new WrikeTask($api_task->id, $api_task->title, $api_task->status, null);
+            $task = new WrikeTask($api_task->id, $api_task->title, $api_task->status, null, $parentIds, null);
 
             array_push($tasks, $task);
         }
@@ -199,7 +203,7 @@ class WrikeAPIController
 
         //Iterate though all fetched tasks for this space
         foreach ($api_response as $api_task) {
-            $task = new WrikeTask($api_task->id, $api_task->title, $api_task->status, $api_task->subTaskIds);
+            $task = new WrikeTask($api_task->id, $api_task->title, $api_task->status, $api_task->subTaskIds, $api_task->parentIds, $api_task->superTaskIds);
 
             array_push($tasks, $task);
         }
@@ -224,7 +228,7 @@ class WrikeAPIController
             $api_response = $this->doApiGet($url);
 
             foreach ($api_response as $api_task) {
-                $task = new WrikeTask($api_task->id, $api_task->title, $api_task->status, $api_task->subTaskIds);
+                $task = new WrikeTask($api_task->id, $api_task->title, $api_task->status, $api_task->subTaskIds, $api_task->parentIds, $api_task->superTaskIds);
                 array_push($tasks, $task);
             }
         }
@@ -242,7 +246,7 @@ class WrikeAPIController
         if (sizeof($api_response) == 1) {
             $api_task = $api_response[0];
 
-            $task = new WrikeTask($api_task->id, $api_task->title, $api_task->status, $api_task->subTaskIds);
+            $task = new WrikeTask($api_task->id, $api_task->title, $api_task->status, $api_task->subTaskIds, $api_task->parentIds, $api_task->superTaskIds);
         }
 
         return $task;

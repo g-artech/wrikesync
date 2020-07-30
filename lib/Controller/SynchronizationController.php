@@ -19,6 +19,7 @@ use OCA\WrikeSync\Wrike\WrikeAPIController;
 use OCA\WrikeSync\Wrike\WrikeFolder;
 use OCA\WrikeSync\Wrike\WrikeSpace;
 use OCA\WrikeSync\Wrike\WrikeTask;
+use OCP\IURLGenerator;
 use OCP\ILogger;
 
 class SynchronizationController extends Controller
@@ -29,6 +30,7 @@ class SynchronizationController extends Controller
     private $nodeFolderMap;
     private $fileNotificator;
     private $parameterService;
+    private $urlGenerator;
     private $logger;
 
     public function __construct(string $AppName, IRequest $request,
@@ -37,6 +39,7 @@ class SynchronizationController extends Controller
                                 NodeTaskMappingService $nodeTaskMap,
                                 WrikeFileNotificationService $fileNotificator,
                                 ConfigParameterService $parameterService,
+                                IURLGenerator $urlGenerator,
                                 ILogger $Logger)
     {
         parent::__construct($AppName, $request);
@@ -45,6 +48,7 @@ class SynchronizationController extends Controller
         $this->nodeTaskMap = $nodeTaskMap;
         $this->fileNotificator = $fileNotificator;
         $this->parameterService = $parameterService;
+        $this->urlGenerator = $urlGenerator;
         $this->logger = $Logger;
     }
 
@@ -183,16 +187,26 @@ class SynchronizationController extends Controller
                     $task = $api->getTaskForId($mapping->getWrTaskId());
                     $created = false;
 
+                    //Generate URL to "files" app with parameter of the current nodes ID
+                    $baseUrl = $this->parameterService->findValueForKey(ConfigParameter::$KEY_NEXTCLOUD_BASE_URL);
+
+                    if ($baseUrl != null) {
+                        $linkToFile = $baseUrl."/apps/files/?fileid=".$currentNode->getId();
+                    } else {
+                        $linkToFile = "#";
+                    }
+
                     if ($task != null) {
-                        echo "Creating comment for task ".$mapping->getWrTaskId()." of file ".$file->getId()."<br>";
-                        $api->createCommentForTaskId($mapping->getWrTaskId(), "New file created: ".$file->getName());
+                        echo "Creating comment for task ".$mapping->getWrTaskId()." of file ".$file->getId()." with link ".$linkToFile."<br>";
+
+                        $api->createCommentForTaskId($mapping->getWrTaskId(), "New file created: <a href=\"".$linkToFile."\">".$file->getName()."</a>");
                         $created = true;
                     } else {
                         $folder = $api->getFolderForId($mapping->getWrTaskId());
 
                         if ($folder != null) {
-                            echo "Creating comment for folder ".$mapping->getWrTaskId()." of file ".$file->getId()."<br>";
-                            $api->createCommentForFolderId($mapping->getWrTaskId(), "New file created: ".$file->getName());
+                            echo "Creating comment for folder ".$mapping->getWrTaskId()." of file ".$file->getId()." with link ".$linkToFile."<br>";
+                            $api->createCommentForFolderId($mapping->getWrTaskId(), "New file created: <a href=\"".$linkToFile."\">".$file->getName()."</a>");
                             $created = true;
                         } else {
                             echo "Cannot create comment for new file because could not find task or folder for ID ".$mapping->getWrTaskId()."<br>";
@@ -204,8 +218,14 @@ class SynchronizationController extends Controller
                         echo "Comment successfully created for file ".$file->getName()." in folder ".$currentNode->getName().".<br>";
 
                         $this->fileNotificator->create($file->getId());
+                    } else {
+                        echo "No comment was created! Please check the log above. Maybe the API call was malicious.<br>";
                     }
+                } else {
+                    echo "Cannot find any mapping for node of file. No comment is being created. Please check if nextcloud node is mapped to a Wrike folder.<br>";
                 }
+            } else {
+                echo "File ".$file->getName()." was already commented.<br>";
             }
         }
 
@@ -244,21 +264,27 @@ class SynchronizationController extends Controller
     private function doSyncForSubFolder(WrikeAPIController $api, WrikeSpace $currentSpace, WrikeFolder $currentFolder, Folder $currentNode) {
         $folderId = $currentFolder->getFolderId();
         $folderTitle = $currentFolder->getTitle();
+        $parentId = $currentFolder->getParentId();
 
         //Abuse the node/task mapping for mapping nodes to folders
         $nodeFolderMapping = $this->nodeTaskMap->findMappingByTaskId($folderId);
         $subNodeForFolder = null;
 
-        echo "Synchronizing sub-folder $folderTitle of space ".$currentSpace->getSpaceTitle()."<br>";
+        echo "<br>-<br>";
+
+        echo "Synchronizing sub-folder $folderTitle with ID '$folderId' and parent ID '$parentId' of space ".$currentSpace->getSpaceTitle()."<br>";
 
         if ($nodeFolderMapping != null) {
+            echo "Found existing mapping for folder. Checking if node of mapping still exists.<br>";
             //If the mapping exists, we already have created a folder for it and have to check if the name is still up to date
             $existingNode = $this->fileSystem->getFsFolderById($nodeFolderMapping->getNcNodeId());
 
             //If the node is existing, set the sub node for the task to it
             if ($existingNode != null) {
+                echo "Node of existing mapping still exists. Using this node for synchronization.<br>";
                 $subNodeForFolder = $existingNode;
             } else {
+                echo "The node of the mapping does not exist anymore. Deleting this mapping.<br>";
                 //If the mapping exists but the node does not, delete the mapping and go on as if the mapping did never exist.
                 $this->nodeTaskMap->delete($nodeFolderMapping);
                 $nodeFolderMapping = null;
@@ -272,12 +298,64 @@ class SynchronizationController extends Controller
             //First create the logical folder on nextcloud file system
             $subNodeForFolder = $this->fileSystem->createFsFolderInFsFolder($currentNode, $folderTitle);
             //Then save the created folder name to the mappings table to map it to the nextcloud task
-            $nodeFolderMapping = $this->nodeTaskMap->create($subNodeForFolder->getId(), $folderId);
+            $this->nodeTaskMap->create($subNodeForFolder->getId(), $folderId, $parentId);
+            $nodeFolderMapping = $this->nodeTaskMap->findMappingByTaskId($folderId);
         }
 
         //Check if the name of the task  has changed, so we have to rename the folder
         if (strcmp($folderTitle, $subNodeForFolder->getName()) !== 0) {
             $this->fileSystem->renameFsFolder($subNodeForFolder, $folderTitle);
+        }
+
+        if ($nodeFolderMapping->getWrParentId() == null) {
+            echo "Found old mapping with not set parent ID. Recreating mapping with parent ID.<br>";
+            $this->nodeTaskMap->delete($nodeFolderMapping);
+            //Try to get the current parent Wrike ID via the mapping of the current nextcloud parent node
+            //If no mapping for the current parent node is found use the parent ID fetched from the Wrike API
+            $this->nodeTaskMap->create($subNodeForFolder->getId(), $folderId, $this->getParentWrikeIdForParentNode($currentNode, $parentId));
+            $nodeFolderMapping = $this->nodeTaskMap->findMappingByTaskId($folderId);
+        }
+
+        $mappedParentWrikeId = $nodeFolderMapping->getWrParentId();
+
+        //Check if a mapping of the parent node exists (which contains the task)
+        if ($mappedParentWrikeId != null) {
+
+            echo "Found mapping for parent node $mappedParentWrikeId with node ID ".$currentNode->getId()."<br>";
+
+            if (strcmp($mappedParentWrikeId, $parentId) !== 0) {
+                echo "Parent IDs have changed. Current new parent is $parentId and mapped parent is $mappedParentWrikeId.<br>";
+                //Try to find a node task mapping for the new parent to get his node ID
+                $newParentMapping = $this->nodeTaskMap->findMappingByTaskId($parentId);
+                if ($newParentMapping == null) {
+                    //If not found try to find the new parent via the manual defined mappings
+                    $newParentMapping = $this->nodeFolderMap->findMappingByFolderId($parentId);
+                }
+
+                if ($newParentMapping != null) {
+                    echo "Found mapping for new parent ID $parentId to get node ID for move.<br>";
+
+                    $newParentNode = $this->fileSystem->getFsFolderById($newParentMapping->getNcNodeId());
+
+                    if ($newParentNode != null) {
+                        echo "Found new parent node: ".$newParentNode->getName().". Moving folder to it and deleting old mapping.<br>";
+                        if($this->fileSystem->moveFsFolder($subNodeForFolder, $newParentNode)) {
+                            echo "Successfully moved folder to new parent node.<br>";
+                            $this->nodeTaskMap->delete($nodeFolderMapping);
+                            echo "Creating new mapping for moved node with new parent.<br>";
+                            $this->nodeTaskMap->create($subNodeForFolder->getId(), $folderId, $parentId);
+                        } else {
+                            echo "FAILED to move folder to new parent node.<br>";
+                        }
+                    } else {
+                        echo "Cannot find node for new parent ID ".$newParentMapping->getNcNodeId()."<br>";
+                    }
+                } else {
+                    echo "Cannot find mapping for new parent ID $parentId to move folder to it.<br>";
+                }
+            } else {
+                echo "Parent IDs of current ($mappedParentWrikeId) and mapped structure ($parentId) are equal. No move required.<br>";
+            }
         }
 
         //Also go through all subfolders of the current folder and do the same sync again
@@ -302,23 +380,60 @@ class SynchronizationController extends Controller
         }
     }
 
+    private function getParentWrikeIdForParentNode(Folder $parentNode, $defaultId) {
+        echo "Trying to get current Wrike parent ID mapped to the current nextcloud parent node ".$parentNode->getId()."<br>";
+        //For default set the parent ID to the default parent ID
+        $parentWrikeId = $defaultId;
+        //First try to get the parents wrike ID via the node task mappings
+        $taskMapping = $this->nodeTaskMap->findMappingByNodeId($parentNode->getId());
+        if ($taskMapping == null) {
+            //If no task mapping is found, try to find a node folder mapping
+            $folderMapping = $this->nodeFolderMap->findMappingByNodeId($parentNode->getId());
+            if ($folderMapping == null) {
+                echo "Cannot find parent Wrike ID via parent node ".$parentNode->getId()." for current task. Using parent ID of Wrike API instead: $defaultId<br>";
+            } else {
+                $parentWrikeId = $folderMapping->getWrFolderId();
+                echo "Found current parent Wrike ID via nextcloud parent node over folder mapping: $parentWrikeId<br>";
+            }
+        } else {
+            $parentWrikeId = $taskMapping->getWrTaskId();
+            echo "Found current parent Wrike ID via nextcloud parent node over task mapping: $parentWrikeId<br>";
+        }
+
+        return $parentWrikeId;
+    }
+
     private function doSyncForTask(WrikeAPIController $api, WrikeSpace $currentSpace, Folder $currentNode, WrikeTask $currentTask) {
         $taskId = $currentTask->getTaskId();
         $taskTitle = $currentTask->getTaskTitle();
+        $parentId = null;
 
-        echo "Synchronizing task $taskTitle of space ".$currentSpace->getSpaceTitle()."<br>";
+        echo "<br>-<br>";
+
+        if ($currentTask->getSuperTaskId() != null) {
+            echo "Using current tasks super task ID to identify parent because task is a subtask.<br>";
+            $parentId = $currentTask->getSuperTaskId();
+        } else {
+            echo "Using tasks native parent ID to identify parent.<br>";
+            $parentId = $currentTask->getParentId();
+        }
+
+        echo "Synchronizing task '$taskTitle' with ID '$taskId' and parent ID '$parentId' of space ".$currentSpace->getSpaceTitle()."<br>";
 
         $nodeTaskMapping = $this->nodeTaskMap->findMappingByTaskId($taskId);
         $subNodeForTask = null;
 
         if ($nodeTaskMapping != null) {
+            echo "An existing mapping was found for this task. Trying to get the node of this mapping.<br>";
             //If the mapping exists, we already have created a folder for it and have to check if the name is still up to date
             $existingNode = $this->fileSystem->getFsFolderById($nodeTaskMapping->getNcNodeId());
 
             //If the node is existing, set the sub node for the task to it
             if ($existingNode != null) {
+                echo "Node of the mapping is existing. Using this for synchronization.<br>";
                 $subNodeForTask = $existingNode;
             } else {
+                echo "The node of the mapping does not exist. Removing mapping!<br>";
                 //If the mapping exists but the node does not, delete the mapping and go on as if the mapping did never exist.
                 $this->nodeTaskMap->delete($nodeTaskMapping);
                 $nodeTaskMapping = null;
@@ -332,12 +447,74 @@ class SynchronizationController extends Controller
             //First create the logical folder on nextcloud file system
             $subNodeForTask = $this->fileSystem->createFsFolderInFsFolder($currentNode, $taskTitle);
             //Then save the created folder name to the mappings table to map it to the nextcloud task
-            $nodeTaskMapping = $this->nodeTaskMap->create($subNodeForTask->getId(), $taskId);
+            $this->nodeTaskMap->create($subNodeForTask->getId(), $taskId, $parentId);
+            $nodeTaskMapping = $this->nodeTaskMap->findMappingByTaskId($taskId);
         }
 
         //Check if the name of the task  has changed, so we have to rename the folder
         if (strcmp($taskTitle, $subNodeForTask->getName()) !== 0) {
             $this->fileSystem->renameFsFolder($subNodeForTask, $taskTitle);
+        }
+
+        if ($nodeTaskMapping->getWrParentId() == null) {
+            echo "Found old mapping with not set parent ID. Recreating mapping with parent ID.<br>";
+            $this->nodeTaskMap->delete($nodeTaskMapping);
+            //Create a new mapping with the current parent ID
+            //Try to get the current parent Wrike ID via the mapping of the current nextcloud parent node
+            //If no mapping for the current parent node is found use the parent ID fetched from the Wrike API
+            $this->nodeTaskMap->create($subNodeForTask->getId(), $taskId, $this->getParentWrikeIdForParentNode($currentNode, $parentId));
+            $nodeTaskMapping = $this->nodeTaskMap->findMappingByTaskId($taskId);
+        }
+
+        //Get the mapping for the current node which is the parent of the task in the nextcloud filesystem. With
+        //this we have the Wrike ID of the parent of the task. After this check if the parent ID of the Wrike Task
+        //is still the same as the parent ID of the mapping for this node which contains the current task as child.
+        //If not, try to find an existing mapping for the new parent ID and move the sub node of the task to the node
+        //of the new parent and delete the old mapping. The next sync get the moved task from the API and will not
+        //find any mapping. It will create a folder for the task which is already there (because it was moved). This
+        //folder will be used then for creation of a new mapping and the sync will go on.
+        //Check if there is a node task mapping for the parent to get the Wrike ID from
+        $mappedParentWrikeId = $nodeTaskMapping->getWrParentId();
+
+        //Check if a mapping of the parent node exists (which contains the task)
+        if ($mappedParentWrikeId != null) {
+
+            echo "Using mapping for task with task ID '".$nodeTaskMapping->getWrTaskId()."' and parent ID '$mappedParentWrikeId' and node ID ".$nodeTaskMapping->getNcNodeId().".<br>";
+
+            if (strcmp($mappedParentWrikeId, $parentId) !== 0) {
+                echo "Parent IDs have changed. Current new parent is $parentId and mapped parent is $mappedParentWrikeId.<br>";
+
+                //Try to find a node task mapping for the new parent to get his node ID
+                $newParentMapping = $this->nodeTaskMap->findMappingByTaskId($parentId);
+                if ($newParentMapping == null) {
+                    //If not found try to find the new parent via the manual defined mappings
+                    $newParentMapping = $this->nodeFolderMap->findMappingByFolderId($parentId);
+                }
+
+                if ($newParentMapping != null) {
+                    echo "Found mapping for new parent ID $parentId to get node ID for move.<br>";
+
+                    $newParentNode = $this->fileSystem->getFsFolderById($newParentMapping->getNcNodeId());
+
+                    if ($newParentNode != null) {
+                        echo "Found new parent node: ".$newParentNode->getName().". Moving folder to it and deleting old mapping.<br>";
+                        if($this->fileSystem->moveFsFolder($subNodeForTask, $newParentNode)) {
+                            $this->nodeTaskMap->delete($nodeTaskMapping);
+                            echo "Folder was successfully moved to new parent node.<br>";
+                            echo "Creating new mapping for moved node with new parent.<br>";
+                            $this->nodeTaskMap->create($subNodeForTask->getId(), $taskId, $parentId);
+                        } else {
+                            echo "FAILED to move folder to new parent node.<br>";
+                        }
+                    } else {
+                        echo "Cannot find node for new parent ID ".$newParentMapping->getNcNodeId()."<br>";
+                    }
+                } else {
+                    echo "Cannot find mapping for new parent ID $parentId to move folder to it.<br>";
+                }
+            } else {
+                echo "Parent IDs of current ($mappedParentWrikeId) and mapped structure ($parentId) are equal. No move required.<br>";
+            }
         }
 
         //Get the sub tasks of the current task
@@ -348,20 +525,6 @@ class SynchronizationController extends Controller
         //For each sub task do the same as above until no sub task exists anymore
         foreach ($tasks as $task) {
             $this->doSyncForTask($api, $currentSpace, $subNodeForTask, $task);
-        }
-    }
-
-    private function scanForNewFiles(WrikeAPIController $api, WrikeSpace $currentSpace, Folder $currentNode, WrikeTask $currentTask) {
-        $subNodes = $this->fileSystem->getFsSubFoldersOfFsFolder($currentNode);
-
-        foreach ($subNodes as $subNode) {
-            //Only check sub nodes from type File
-            if ($subNode instanceof File) {
-                $fileName = $subNode->getName();
-
-                //Todo: Check if the file was created until the last 24 hours and check if we have created a comment for that
-                //Todo: If no comment was created for the a new file then create one
-            }
         }
     }
 

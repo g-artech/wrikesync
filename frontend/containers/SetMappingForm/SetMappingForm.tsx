@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react'
-import axios from 'axios'
+import axios from '@nextcloud/axios'
 import {BulletList} from 'react-content-loader'
 // import TableLoader from '../../components/TableLoader/tableLoader'
 import {InputAndButton} from '../../components/InputAndButton/InputAndButton'

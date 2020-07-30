@@ -8,6 +8,7 @@ class NodeTaskMapping extends Entity implements JsonSerializable
 {
     protected $ncNodeId;
     protected $wrTaskId;
+    protected $wrParentId;
 
     /**
      * @param mixed $ncNodeId
@@ -34,6 +35,14 @@ class NodeTaskMapping extends Entity implements JsonSerializable
     }
 
     /**
+     * @param mixed $wrParentId
+     */
+    public function setWrParentId($wrParentId): void
+    {
+        $this->wrParentId = $wrParentId;
+    }
+
+    /**
      * @return mixed
      */
     public function getWrTaskId()
@@ -41,12 +50,25 @@ class NodeTaskMapping extends Entity implements JsonSerializable
         return $this->wrTaskId;
     }
 
+    /**
+     * @return mixed
+     */
+    public function getWrParentId()
+    {
+        return $this->wrParentId;
+    }
+
+    public function hasParentId() {
+        return $this->wrParentId != null;
+    }
+
     public function jsonSerialize()
     {
         return [
             "id" => $this->id,
             "nc_node_id" => $this->ncNodeId,
-            "wr_task_id" => $this->wrTaskId
+            "wr_task_id" => $this->wrTaskId,
+            "wr_parent_id" => $this->wrParentId
         ];
     }
 }

@@ -2,15 +2,15 @@
 <info xmlns:xsi= "http://www.w3.org/2001/XMLSchema-instance"
       xsi:noNamespaceSchemaLocation="https://apps.nextcloud.com/schema/apps/info.xsd">
     <id>wrikesync</id>
-    <name>Wrike Sync</name>
-    <summary>Wrike Projectmanagement Space Sync</summary>
-    <description><![CDATA[Wrike Projectmanagement Space Sync]]></description>
-    <version>0.9.6</version>
+    <name>WrikeSync</name>
+    <summary>Wrike Projectmanagement Folder Sync</summary>
+    <description><![CDATA[Syncronization between the folder structure of Wrike Projectmanagement software and the Nextcloud filesystem structure. ]]></description>
+    <version>1.2.3</version>
     <licence>agpl</licence>
     <author mail="support@g-ar.tech" homepage="https://g-ar.tech">GArTech</author>
     <namespace>WrikeSync</namespace>
     <category>organization</category>
-    <bugs>https://g-ar.tech/support</bugs>
+    <bugs>https://wrikesync.g-ar.tech/support</bugs>
     <dependencies>
         <nextcloud min-version="15" max-version="19"/>
     </dependencies>

@@ -30,7 +30,7 @@ class FileSystemService
         $this->UserId = $UserId;
     }
 
-    private function createNextcloudFolderFromFsFolder(Folder $fsFolder) {
+    private function createNextcloudFolderFromFsFolder($fsFolder) {
         if ($fsFolder == null) {
             return null;
         }
@@ -110,7 +110,12 @@ class FileSystemService
         return $this->createFsFolderInFsFolder($folder, $folderName);
     }
 
-    public function createFsFolderInFsFolder(Folder $folder, $folderName) {
+    public function createFsFolderInFsFolder($folder, $folderName) {
+        //If the given folder is null just return null
+        if ($folder == null) {
+            return null;
+        }
+        
         //If there is already a folder with the new name then return it
         if ($folder->nodeExists($folderName)) {
             return $folder->get($folderName);
@@ -162,24 +167,30 @@ class FileSystemService
         return null;
     }
 
-    public function getFsSubFoldersOfFsFolder(Folder $folder) : array {
+    public function getFsSubFoldersOfFsFolder($folder) : array {
         $folders = array();
 
-        foreach ($folder->getDirectoryListing() as $node) {
-            if ($node instanceof Folder) {
-                array_push($folders, $node);
+        //Only go through subfolders if folder is not null!
+        if ($folder != null) {
+            foreach ($folder->getDirectoryListing() as $node) {
+                if ($node instanceof Folder) {
+                    array_push($folders, $node);
+                }
             }
         }
 
         return $folders;
     }
 
-    public function getFsFilesOfFsFolder(Folder $folder) : array {
+    public function getFsFilesOfFsFolder($folder) : array {
         $files = array();
 
-        foreach ($folder->getDirectoryListing() as $node) {
-            if ($node instanceof File) {
-                array_push($files, $node);
+        //Only get files if folder is not null!
+        if ($folder != null) {
+            foreach ($folder->getDirectoryListing() as $node) {
+                if ($node instanceof File) {
+                    array_push($files, $node);
+                }
             }
         }
 
@@ -191,13 +202,36 @@ class FileSystemService
         $this->renameFsFolder($folder, $newName);
     }
 
-    public function renameFsFolder(Folder $folder, $newName)  {
+    public function renameFsFolder($folder, $newName)  {
+        //Dont do anything if folder is null!
+        if ($folder == null) {
+            return;
+        }
+        
         $parentFolder = $folder->getParent();
         $newPath = $parentFolder->getPath()."/".$newName;
 
         AppLogger::logWarning($this->logger, "Renaming folder ".$folder->getName()." to $newPath.");
 
         $folder->move($newPath);
+    }
+
+    public function moveFsFolder($folder, $newParent) {
+        if ($folder == null || $newParent == null) {
+            return;
+        }
+
+        try {
+            $newPath = $newParent->getPath()."/".$folder->getName();
+
+            $folder->move($newPath);
+
+            return true;
+        } catch (\Exception $e) {
+            AppLogger::logError($this->logger, "Move of folder ".$folder->getName()." to $newPath failed: ".$e->getMessage());
+        }
+
+        return false;
     }
 
 }

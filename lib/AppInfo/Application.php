@@ -62,7 +62,7 @@ class Application extends App
 
         //Register the service classes which are using the registered mapper classes
         $container->registerService('NodeFolderMappingService',function($c) {
-            return new NodeFolderMappingService($c->query("NodeFolderMappingMapper"), $c->query("FileSystemService"));
+            return new NodeFolderMappingService($c->query("NodeFolderMappingMapper"), $c->query("FileSystemService"), $c->query("NodeTaskMappingService"));
         });
         $container->registerService('NodeTaskMappingService',function($c) {
             return new NodeTaskMappingService($c->query("NodeTaskMappingMapper"));

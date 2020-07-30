@@ -4,6 +4,7 @@
 namespace OCA\WrikeSync\Controller;
 
 use OCA\WrikeSync\Service\NodeFolderMappingService;
+use OCA\WrikeSync\Service\NodeTaskMappingService;
 use OCP\IRequest;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\DataResponse;
@@ -20,11 +21,13 @@ class NodeFolderMappingController extends Controller
 {
     private $service;
     private $userId;
+    private $nodeTaskService;
 
-    public function __construct(string $AppName, IRequest $request, NodeFolderMappingService $service, $UserId) {
+    public function __construct(string $AppName, IRequest $request, NodeFolderMappingService $service, NodeTaskMappingService $nodeTaskMappingService, $UserId) {
         parent::__construct($AppName, $request);
         $this->service = $service;
         $this->userId = $UserId;
+        $this->nodeTaskService = $nodeTaskMappingService;
     }
 
     //Todo: Entfernung der Annotationen vor Übergabe!!!
@@ -83,7 +86,7 @@ class NodeFolderMappingController extends Controller
      */
     public function create($ncNodeId, $wrFolderId) {
         try {
-            $entity = $this->service->create($ncNodeId, $wrFolderId);
+            $entity = $this->service->create($ncNodeId, $wrFolderId, null);
             if ($entity != null) {
                 return new DataResponse($entity);
             } else {
@@ -100,7 +103,7 @@ class NodeFolderMappingController extends Controller
      */
     public function createForName($ncNodeName, $wrFolderId) {
         try {
-            $entity = $this->service->createForName($ncNodeName, $wrFolderId);
+            $entity = $this->service->createForName($ncNodeName, $wrFolderId, null);
             if ($entity != null) {
                 return new DataResponse($entity);
             } else {
@@ -126,5 +129,13 @@ class NodeFolderMappingController extends Controller
         } catch(Exception $e) {
             return new DataResponse([], Http::STATUS_INTERNAL_SERVER_ERROR);
         }
+    }
+
+    /**
+     * @NoAdminRequired
+     * @NoCSRFRequired
+     */
+    public function clear() {
+        $this->nodeTaskService->clear();
     }
 }
