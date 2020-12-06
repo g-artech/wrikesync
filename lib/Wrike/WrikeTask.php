@@ -29,7 +29,7 @@ class WrikeTask implements JsonSerializable
 
     function getTaskTitle() {
         if ($this->isCompleted()) {
-            return "_COMPLETED_".$this->title;
+            return $this->title."_COMPLETED";
         }
         return $this->title;
     }
