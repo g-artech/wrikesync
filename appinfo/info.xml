@@ -12,7 +12,7 @@
     <category>organization</category>
     <bugs>https://wrikesync.g-ar.tech/support</bugs>
     <dependencies>
-        <nextcloud min-version="15" max-version="20"/>
+        <nextcloud min-version="20" max-version="22"/>
     </dependencies>
 
     <!--<navigations>
