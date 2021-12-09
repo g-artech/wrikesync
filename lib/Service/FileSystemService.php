@@ -53,7 +53,7 @@ class FileSystemService
     public function getNextcloudHomeFolderForUser() {
         $relativePath = "/".$this->UserId."/files";
         if ($this->rootFolder->nodeExists($relativePath)) {
-            echo "Node exists";
+            //echo "Node exists";
             return $this->rootFolder->get($relativePath);
         }
 
@@ -84,7 +84,7 @@ class FileSystemService
 
         //If the folder could not be found by the defined ID use the home folder of the requesting user as sync root
         if ($folder == null) {
-            echo "Sync root is not defined. Using home directory of user ".$this->UserId;
+            //echo "Sync root is not defined. Using home directory of user ".$this->UserId;
             $folder = $this->getNextcloudHomeFolderForUser($this->UserId);
         }
 
@@ -137,7 +137,7 @@ class FileSystemService
         //Otherwise nextcloud API will prevent the retrieving of the folder.
         if(\OC\Files\Filesystem::init($syncUser, "/")) {
             //If the filesystem was not initialized before log this message
-            echo "FileSystem initialized for sync user $syncUser and path '/'<br>";
+            //echo "FileSystem initialized for sync user $syncUser and path '/'<br>";
         }
     }
 
