@@ -60,21 +60,28 @@ class SynchronizationController extends Controller
             echo "Found last start parameter with value ".$lastStart->getValue()."<br>";
 
             $currentTime = time();
-            $maxTimeout = 10 * 60; //10 minutes
+            $maxTimeout = 60 * 60; //60 Minutes
             //If the start timestamp of the running cronjob is older than the timeout then we ran into an error or
             //non-properly exited cronjob because the parameter should be unset at the end of the job.
             if ($currentTime - $lastStart->getValue() > $maxTimeout) {
                 echo "Last start parameter is timed out. Deleting parameter to start next job.<br>";
                 //If we have a timeout reset the parameter;
                 $this->parameterService->delete($lastStart->getId());
+
+                AppLogger::logWarning($this->logger, "Last start parameter ".$lastStart->getValue()." is timed out. Deleting parameter to start next job.");
             } else {
                 echo "Last start parameter has not timed out. Aborting cronjob to avoid parallel jobs.<br>";
+
+                AppLogger::logError($this->logger, "Last start parameter ".$lastStart->getValue()." has not timed out. Aborting cronjob to avoid parallel jobs.");
+
                 //If we have no timeout exit the job to prevent parallel jobs.
                 return;
             }
         }
         //Set the start timestamp to prevent parallel jobs
         $this->parameterService->create(ConfigParameter::$KEY_CRONJOB_LAST_EXEC_START, time());
+
+        AppLogger::logInfo($this->logger, "Starting new synchronization with WrikeSync.");
 
         try {
             $api = new WrikeAPIController($this->parameterService, $this->logger);
@@ -85,6 +92,8 @@ class SynchronizationController extends Controller
                 if ($space->isPersonalSpace()) {
                     echo "<br>Ignoring space ".$space->getSpaceTitle()." because it is a private space.<br>";
 
+                    AppLogger::logWarning($this->logger, "Ignoring space ".$space->getSpaceTitle()." because it is a private space.");
+
                     continue;
                 }
 
@@ -92,6 +101,8 @@ class SynchronizationController extends Controller
                 $spaceFolder = $api->getFolderForId($space->getSpaceId());
 
                 echo "<br>--------------------------------<br>Starting sync process for space ".$space->getSpaceTitle()." (ID: ".$space->getSpaceId().")<br>";
+
+                AppLogger::logInfo($this->logger, "Starting sync process for space ".$space->getSpaceTitle()." (ID: ".$space->getSpaceId().")");
 
                 //Check if the folder is existing
                 if ($spaceFolder != null) {
@@ -130,16 +141,22 @@ class SynchronizationController extends Controller
                             }
                         } else {
                             echo "Cannot sync folder ".$spaceSubFolder->getTitle()." (".$spaceSubFolder->getFolderId().") in space-folder ".$spaceFolder->getTitle()." because no mapping was found<br>";
+
+                            AppLogger::logWarning($this->logger, "Cannot sync folder ".$spaceSubFolder->getTitle()." (".$spaceSubFolder->getFolderId().") in space-folder ".$spaceFolder->getTitle()." because no mapping was found");
                         }
                     }
                 } else {
                     echo "Unable to sync ".$space->getSpaceTitle()." (ID: ".$space->getSpaceId().") because no folder with space ID found.<br>";
+
+                    AppLogger::logError($this->logger, "Unable to sync ".$space->getSpaceTitle()." (ID: ".$space->getSpaceId().") because no folder with space ID found.");
                 }
             }
 
             $this->checkForNewFiles($api);
         } catch(\Exception $e) {
             echo "AN ERROR OCCURED DURING CRONJOB EXECUTION: ".$e->getMessage()."<br>";
+
+            AppLogger::logCritical($this->logger, "AN ERROR OCCURED DURING CRONJOB EXECUTION: ".$e->getMessage());
         }
 
         //Get the last start parameter to delete it
@@ -152,6 +169,8 @@ class SynchronizationController extends Controller
         }
 
         $this->parameterService->updateLastRunForSync();
+
+        AppLogger::logInfo($this->logger, "Finished synchronization with WrikeSync.");
     }
 
     public function checkForNewFiles(WrikeAPIController $api) {
@@ -169,6 +188,8 @@ class SynchronizationController extends Controller
             }
         } catch(\Exception $e) {
             echo "AN ERROR OCCURED WHILE GENERALLY CHECKING FOR NEW FILES: ".$e->getMessage()."<br>";
+
+            AppLogger::logCritical($this->logger, "AN ERROR OCCURED WHILE GENERALLY CHECKING FOR NEW FILES: ".$e->getMessage());
         }
     }
 
@@ -241,6 +262,8 @@ class SynchronizationController extends Controller
             }
         } catch(\Exception $e) {
             echo "AN ERROR OCCURED WHILE CHECKING FOR NEW FILES IN FOLDER: ".$e->getMessage()."<br>";
+
+            AppLogger::logCritical($this->logger, "AN ERROR OCCURED WHILE CHECKING FOR NEW FILES IN FOLDER: ".$e->getMessage());
         }
     }
 
@@ -270,6 +293,8 @@ class SynchronizationController extends Controller
             }
         } catch(\Exception $e) {
             echo "AN ERROR OCCURED DURING SYNC OF ROOT FOLDER: ".$e->getMessage()."<br>";
+
+            AppLogger::logCritical($this->logger, "AN ERROR OCCURED DURING SYNC OF ROOT FOLDER: ".$e->getMessage());
         }
     }
 
@@ -393,6 +418,8 @@ class SynchronizationController extends Controller
             }
         } catch(\Exception $e) {
             echo "AN ERROR OCCURED DURING SYNC OF SUB-FOLDER: ".$e->getMessage()."<br>";
+
+            AppLogger::logCritical($this->logger, "AN ERROR OCCURED DURING SYNC OF SUB-FOLDER: ".$e->getMessage());
         }
     }
 
@@ -418,6 +445,8 @@ class SynchronizationController extends Controller
             }
         } catch(\Exception $e) {
             echo "AN ERROR OCCURED WHILE FETCHING WRIKE ID OF PARENT NODE: ".$e->getMessage()."<br>";
+
+            AppLogger::logCritical($this->logger, "AN ERROR OCCURED WHILE FETCHING WRIKE ID OF PARENT NODE: ".$e->getMessage());
         }
 
         return $parentWrikeId;
@@ -549,6 +578,8 @@ class SynchronizationController extends Controller
             }
         } catch(\Exception $e) {
             echo "AN ERROR OCCURED DURING SYNC OF TASK: ".$e->getMessage()."<br>";
+
+            AppLogger::logCritical($this->logger, "AN ERROR OCCURED DURING SYNC OF TASK: ".$e->getMessage());
         }
     }
 

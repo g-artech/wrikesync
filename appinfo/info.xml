@@ -5,7 +5,7 @@
     <name>WrikeSync</name>
     <summary>Wrike Projectmanagement Folder Sync</summary>
     <description><![CDATA[Syncronization between the folder structure of Wrike Projectmanagement software and the Nextcloud filesystem structure. ]]></description>
-    <version>1.2.7</version>
+    <version>1.2.8</version>
     <licence>agpl</licence>
     <author mail="support@g-ar.tech" homepage="https://g-ar.tech">GArTech</author>
     <namespace>WrikeSync</namespace>
