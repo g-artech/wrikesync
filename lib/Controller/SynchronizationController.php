@@ -9,6 +9,7 @@ use OCP\Files\Folder;
 use OCP\IRequest;
 use OCP\AppFramework\Controller;
 
+use OCA\WrikeSync\AppInfo\AppLogger;
 use OCA\WrikeSync\Db\ConfigParameter;
 use OCA\WrikeSync\Service\ConfigParameterService;
 use OCA\WrikeSync\Service\FileSystemService;
